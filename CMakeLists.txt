@@ -24,8 +24,8 @@ find_library(BOOST_THREAD boost_thread PATHS ${BOOST_LIB} NO_DEFAULT_PATH)
 find_library(GLPK_P glpk PATHS ${GLPK_LIB})
 include_directories(SYSTEM ${GLPK_INC} SYSTEM ${BLAZE_INC} SYSTEM ${SPDLOG_INC})
 
-#file(GLOB parser_src src/*.cpp)
-#add_library(parser ${parser_src})
+file(GLOB parser_src src/*.cpp)
+add_library(parser ${parser_src})
 
 # TODO Used for testing
 set(SOURCE_FILES main.cpp)
@@ -33,5 +33,6 @@ add_executable(LPParser ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME}
         ${BOOST_SYSTEM} ${BOOST_THREAD}
+        parser
         ${GLPK_P}
         pthread)

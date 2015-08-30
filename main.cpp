@@ -11,9 +11,9 @@ int main() {
 
   _logger->info("Parsing started");
 
-//  lp::Parser parser("/home/satya/LPProblems/QiTest.lp", false);
+  //  lp::Parser parser("/home/satya/LPProblems/QiTest.lp", false);
   //  lp::Parser parser("/home/satya/LPProblems/test/afiro.lp", false);
-    lp::Parser parser("/home/satya/LPProblems/test/maros-r7.lp", false);
+  lp::Parser parser("/home/satya/LPProblems/test/maros-r7.lp", false);
   // TODO Free and Fixed variables are not handled yet
   //  lp::Parser parser("/home/satya/LPProblems/test/test.lp", false);
 
@@ -25,7 +25,7 @@ int main() {
 
   _logger->info("Parsing ended");
 
-  //  cout << cProblem << endl;
+//    cout << cProblem << endl;
 
   return 0;
 }

@@ -77,7 +77,7 @@ public:
   friend std::ostream& operator<<(std::ostream& os, const Problem& problem);
 };
 
-std::ostream& operator<<(std::ostream& os, const Problem& problem) {
+inline std::ostream& operator<<(std::ostream& os, const Problem& problem) {
   std::cout << "Equality matrix: \n" << problem.A << std::endl;
   std::cout << "Inequality matrix: \n" << problem.G << std::endl;
 
@@ -143,7 +143,8 @@ void printArray(const std::string& context, int size, const Array<T>& array) {
   }
 }
 
-std::ostream& operator<<(std::ostream& os, const ClassicalProblem& problem) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const ClassicalProblem& problem) {
   printArray("Objective matrix", problem.columns, problem.c);
 
   printArray("Inequality matrix Column ptr", problem.columns + 1,

@@ -24,7 +24,7 @@ class Parser {
 private:
   const static std::shared_ptr<spdlog::logger> _logger;
 
-  using Dimensions = std::tuple<int, int, int>;
+  using Dimensions = std::tuple<int, int, int, int, int>;
 
   glp_prob* _problem;
 
@@ -42,25 +42,29 @@ private:
    * Returns final Equality rows and Inequality rows, used to initialize
    * SparseMatrix and DenseVector sizes
    */
-  Dimensions getFinalRowsAndColumns(int definedRows, int definedColumns) {
+  Dimensions getFinalDimensions(int definedRows, int definedColumns) {
     int equalityRows = 0;
     int inequalityRows = 0;
     int columns = definedColumns;
 
+    size_t equalityNnz = 0;
+    size_t inequalityNnz = 0;
+
     for (int r = 1; r <= definedRows; ++r) {
       int rowType = glp_get_row_type(_problem, r);
-
-      // _logger->info("Row type {}", rowType);
+      int nnzRow = glp_get_mat_row(_problem, r, nullptr, nullptr);
 
       switch (rowType) {
         case GLP_FR:
           throw std::invalid_argument("There will be no free rows");
         case GLP_FX:
           ++equalityRows;
+          equalityNnz += nnzRow;
           break;
         case GLP_UP:
         case GLP_LO:
           ++inequalityRows;
+          inequalityNnz += nnzRow;
           break;
         case GLP_DB:
           throw std::invalid_argument(
@@ -91,20 +95,31 @@ private:
               "face a problem :-)");
         case GLP_UP:
         case GLP_LO:
+          // Positive orthant constraints
           ++inequalityRows;
+          ++inequalityNnz;
           break;
         case GLP_DB:
           // What is format for double bound eg. low <= var <= high, or all
           // combinations!
           // eg. bin1 <= 300 is treated as double bound like 0 <= bin1 <= 300
           inequalityRows += 2;
+          inequalityNnz += 2;
           break;
         default:
           throw std::invalid_argument("Wrong row type");
       }
     }
 
-    return std::make_tuple(equalityRows, inequalityRows, columns);
+    _logger->info("Equality rows: {}, Inequality rows: {}, Columns: {}, "
+                  "Equality nnz: {}, Inequality nnz: {}",
+                  equalityRows, inequalityRows, columns, equalityNnz,
+                  inequalityNnz);
+    // TODO Increase nnz by small factor to avoid any memory issues! But whats
+    // the factor!?
+    // TODO I think I have calculated nnz properly, but who knows
+    return std::make_tuple(equalityRows, inequalityRows, columns, equalityNnz,
+                           inequalityNnz);
   }
 
   lp::Problem createProblem(Dimensions finalRowsAndColumns, int definedRows,
@@ -135,15 +150,14 @@ private:
     problem.b.reserve(problem.b.size());
     problem.h.reserve(problem.h.size());
 
+    A.reserve(std::get<3>(finalRowsAndColumns));
+    G.reserve(std::get<4>(finalRowsAndColumns));
+
+    _logger->info("Data reserved");
+
     for (int i = 1; i <= definedRows; ++i) {
       int nnzRow = glp_get_mat_row(_problem, i, index.get(), values.get());
       int rowType = glp_get_row_type(_problem, i);
-
-      if (rowType == GLP_FX) {
-        A.reserve(equalityRow, nnzRow);
-      } else if (rowType == GLP_UP || rowType == GLP_LO) {
-        G.reserve(inequalityRow, nnzRow);
-      }
 
       int sign = 1; // Default sign
       if (rowType == GLP_LO) {
@@ -151,8 +165,6 @@ private:
       }
 
       for (int j = 1; j <= nnzRow; ++j) {
-        /*_logger->info("Row index: {}, Column index: {}, Column value: {}", i,
-                      index[j], values[j]);*/
 
         if (rowType == GLP_FX) {
           A.append(equalityRow, index[j] - 1, values[j]);
@@ -203,8 +215,8 @@ private:
 
     //    _logger->info("Inequality rows: ") << G;
 
-    problem.A = std::move(A);
-    problem.G = std::move(G);
+    problem.A = A;
+    problem.G = G;
 
     return problem;
   }
@@ -216,7 +228,7 @@ private:
    * value 1 is upper bound
    * value -1 is lower bound
    */
-  void createInequalityRowWithValueOne(
+  void inline createInequalityRowWithValueOne(
       blaze::CompressedMatrix<double>& G, int& row, const int columnIndex,
       const int value,
       blaze::DynamicVector<double, blaze::columnVector>& h) const {
@@ -238,25 +250,26 @@ public:
 
   ~Parser() { glp_free(_problem); };
 
+  /**
+   *
+   */
   Problem getProblem() {
-    _logger->info("Parsing started");
-
     int definedRows = glp_get_num_rows(_problem);
     int definedColumns = glp_get_num_cols(_problem);
 
     Dimensions finalRowsAndColumns =
-        getFinalRowsAndColumns(definedRows, definedColumns);
-
-    _logger->info("Equality rows {}, Inequality rows {}, Columns {}",
-                  std::get<0>(finalRowsAndColumns),
-                  std::get<1>(finalRowsAndColumns),
-                  std::get<2>(finalRowsAndColumns));
+        getFinalDimensions(definedRows, definedColumns);
 
     return createProblem(finalRowsAndColumns, definedRows, definedColumns);
   }
 
+  /**
+   *
+   */
   ClassicalProblem getClassicalProblem() {
+    _logger->info("Creation of Blaze objects started");
     const Problem problem = getProblem();
+    _logger->info("Creation of Blaze objects Ended");
 
     ClassicalProblem cProblem(problem.equalityRows, problem.inequalityRows,
                               problem.columns, problem.G.nonZeros(),
@@ -304,16 +317,11 @@ public:
     for (size_t i = 0; i < coeffMatrix.columns(); ++i) {
       std::for_each(blaze::cbegin(coeffMatrix, i), blaze::cend(coeffMatrix, i),
                     [&](const ColumnIterator& iter) {
-        /*_logger->info("Column: {}, Row: {}, Value: {}", i, iter.index(),
-                      iter.value());*/
 
         ++columnPtr;
 
         value[rowPtr] = iter.value();
         rp[rowPtr] = iter.index();
-
-        /*_logger->info("Inserted value: {} at rowPtr {}", value[rowPtr],
-         * rowPtr);*/
 
         ++rowPtr;
       });

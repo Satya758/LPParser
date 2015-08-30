@@ -36,3 +36,6 @@ target_link_libraries(${PROJECT_NAME}
         parser
         ${GLPK_P}
         pthread)
+
+install(TARGETS parser DESTINATION lib)
+install(FILES include/Parser.hpp include/Problem.hpp DESTINATION include)

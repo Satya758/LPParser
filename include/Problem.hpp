@@ -169,6 +169,5 @@ inline std::ostream& operator<<(std::ostream& os,
 
   return os;
 }
-
 } // lp
 #endif // PROBLEM_HPP

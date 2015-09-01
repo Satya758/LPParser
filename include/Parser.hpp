@@ -28,7 +28,10 @@ private:
 
   glp_prob* _problem;
 
-  bool _convertInequalityToEquality = false;
+  // flag to indicate to convert Inequality constraints to equality constraints
+  // by adding slack variable, so there will additional column for each
+  // inequality constraint, sign of slack depends on inequality operator
+  bool _convertICToEC = false;
 
   glp_prob* createGlpProblem(const std::string filePath) const;
 
@@ -63,7 +66,7 @@ private:
 public:
   Parser(const std::string filePath, const bool convertInequalityToEquality)
       : _problem(createGlpProblem(filePath)),
-        _convertInequalityToEquality(convertInequalityToEquality) {}
+        _convertICToEC(convertInequalityToEquality) {}
 
   ~Parser() { glp_free(_problem); };
 

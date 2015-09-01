@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.3)
 project(LPParser)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} -std=c++14 -Wall")
+set(CMAKE_BUILD_TYPE "Release")
 
 add_subdirectory(include)
 

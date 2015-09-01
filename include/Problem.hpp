@@ -52,7 +52,7 @@ using DenseVector = blaze::DynamicVector<double, blaze::columnVector>;
 class Problem {
 public:
   // Options are defaulted
-  Problem(int equalityRows, int inequalityRows, int columns)
+  Problem(size_t equalityRows, size_t inequalityRows, size_t columns)
       : equalityRows(equalityRows),
         inequalityRows(inequalityRows),
         columns(columns),
@@ -62,9 +62,9 @@ public:
         A(this->equalityRows, this->columns),
         b(this->equalityRows) {}
 
-  const int equalityRows;
-  const int inequalityRows;
-  const int columns;
+  const size_t equalityRows;
+  const size_t inequalityRows;
+  const size_t columns;
 
   DenseVector c; // Objective coefficients
 
@@ -98,47 +98,48 @@ template <class T> using Array = std::unique_ptr<T[]>;
  */
 class ClassicalProblem {
 public:
-  ClassicalProblem(const int equalityRows, const int inequalityRows,
-                   const int columns, const int Gnnz, const int Annz)
+  ClassicalProblem(const size_t equalityRows, const size_t inequalityRows,
+                   const size_t columns, const size_t Gnnz, const size_t Annz)
       : equalityRows(equalityRows),
         inequalityRows(inequalityRows),
         columns(columns),
         c(std::make_unique<double[]>(columns)),
-        GColumnptr(std::make_unique<int[]>(columns + 1)),
-        GRowPtr(std::make_unique<int[]>(Gnnz)),
+        GColumnptr(std::make_unique<size_t[]>(columns + 1)),
+        GRowPtr(std::make_unique<size_t[]>(Gnnz)),
         GValue(std::make_unique<double[]>(Gnnz)),
-        AColumnptr(std::make_unique<int[]>(columns + 1)),
-        ARowPtr(std::make_unique<int[]>(Annz)),
+        AColumnptr(std::make_unique<size_t[]>(columns + 1)),
+        ARowPtr(std::make_unique<size_t[]>(Annz)),
         AValue(std::make_unique<double[]>(Annz)),
-        hValue(std::make_unique<double[]>(inequalityRows)),
-        bValue(std::make_unique<double[]>(equalityRows)) {}
+        h(std::make_unique<double[]>(inequalityRows)),
+        b(std::make_unique<double[]>(equalityRows)) {}
 
-  const int equalityRows;
-  const int inequalityRows;
-  const int columns;
+  const size_t equalityRows;
+  const size_t inequalityRows;
+  const size_t columns;
 
   Array<double> c;
 
-  Array<int> GColumnptr;
-  Array<int> GRowPtr;
+  Array<size_t> GColumnptr;
+  Array<size_t> GRowPtr;
   Array<double> GValue;
 
-  Array<int> AColumnptr;
-  Array<int> ARowPtr;
+  Array<size_t> AColumnptr;
+  Array<size_t> ARowPtr;
   Array<double> AValue;
 
-  Array<double> hValue;
-  Array<double> bValue;
+  Array<double> h;
+  Array<double> b;
 
   friend std::ostream& operator<<(std::ostream& os,
                                   const ClassicalProblem& problem);
 };
 
 template <typename T>
-void printArray(const std::string& context, int size, const Array<T>& array) {
+void printArray(const std::string& context, size_t size,
+                const Array<T>& array) {
   std::cout << "\n\n" << context << std::endl;
 
-  for (int j = 0; j < size; ++j) {
+  for (size_t j = 0; j < size; ++j) {
     std::cout << array[j] << ", ";
   }
 }
@@ -163,9 +164,9 @@ inline std::ostream& operator<<(std::ostream& os,
   printArray("Equality matrix values", problem.AColumnptr[problem.columns],
              problem.AValue);
 
-  printArray("Equality RHS", problem.equalityRows, problem.bValue);
+  printArray("Equality RHS", problem.equalityRows, problem.b);
 
-  printArray("Inequality RHS", problem.inequalityRows, problem.hValue);
+  printArray("Inequality RHS", problem.inequalityRows, problem.h);
 
   return os;
 }

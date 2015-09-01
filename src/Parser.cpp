@@ -38,8 +38,21 @@ Parser::Dimensions Parser::getFinalDimensions(int definedRows,
         break;
       case GLP_UP:
       case GLP_LO:
-        ++inequalityRows;
-        inequalityNnz += nnzRow;
+        if (_convertICToEC) {
+          // As slack variable is added, column is increased
+          ++columns;
+          // So does equality row, as equality converted to inequality
+          ++equalityRows;
+          // As slack implicit x >= 0 constraint
+          ++inequalityRows;
+          // Increase by one to accommodate slack
+          ++inequalityNnz;
+          // plus 1 indicated addition of new slack column
+          equalityNnz += nnzRow + 1;
+        } else {
+          ++inequalityRows;
+          inequalityNnz += nnzRow;
+        }
         break;
       case GLP_DB:
         throw std::invalid_argument(
@@ -49,6 +62,9 @@ Parser::Dimensions Parser::getFinalDimensions(int definedRows,
     }
   }
 
+  // These are bounds on each column along with implicit constraint on every
+  // variable to be in positive orthant
+  // Simple single column bounds are not converted into equality constraints
   for (int c = 1; c <= definedColumns; ++c) {
     int columnType = glp_get_col_type(_problem, c);
 
@@ -63,14 +79,16 @@ Parser::Dimensions Parser::getFinalDimensions(int definedRows,
         // Column is replaced by two columns so increase column count by one
         // ++columns; // TODO Deal later
         throw std::invalid_argument("Free variables are dealt later");
-        break;
+      // break;
       case GLP_FX:
         throw std::invalid_argument(
             "Fixed variables are constants are not considered now, until I "
             "face a problem :-)");
       case GLP_UP:
+        throw std::invalid_argument(
+            "Upper bound should not appear as far as I know :-( ");
       case GLP_LO:
-        // Positive orthant constraints
+        // Positive orthant constraints, implicit constraints
         ++inequalityRows;
         ++inequalityNnz;
         break;
@@ -109,11 +127,11 @@ Problem Parser::createProblem(Parser::Dimensions finalRowsAndColumns,
   int inequalityRow = 0;
 
   // As glp index starts with 1 we have added +1 memory
-  std::unique_ptr<int[]> index;
-  index.reset(new int[definedColumns + 1]);
-
-  std::unique_ptr<double[]> values;
-  values.reset(new double[definedColumns + 1]);
+  // TODO Do we have to allocate memory or glp will do it for us, for now being
+  // safe I have added required memory
+  std::unique_ptr<int[]> index = std::make_unique<int[]>(definedColumns + 1);
+  std::unique_ptr<double[]> values =
+      std::make_unique<double[]>(definedColumns + 1);
 
   // Creating new row matrix not using Problems object as they are column
   // major
@@ -129,37 +147,76 @@ Problem Parser::createProblem(Parser::Dimensions finalRowsAndColumns,
   G.reserve(std::get<4>(finalRowsAndColumns));
 
   _logger->info("Data reserved");
+  // Slack column index starts at already defined column count
+  int slackColumnIndex = definedColumns;
 
   for (int i = 1; i <= definedRows; ++i) {
     int nnzRow = glp_get_mat_row(_problem, i, index.get(), values.get());
     int rowType = glp_get_row_type(_problem, i);
 
-    int sign = 1; // Default sign
-    if (rowType == GLP_LO) {
-      sign = -1;
-    }
-
     for (int j = 1; j <= nnzRow; ++j) {
 
       if (rowType == GLP_FX) {
         A.append(equalityRow, index[j] - 1, values[j]);
-        problem.b[equalityRow] = glp_get_row_ub(_problem, i);
-      } else if (rowType == GLP_UP || rowType == GLP_LO) {
-        G.append(inequalityRow, index[j] - 1, sign * values[j]);
+      } else if (rowType == GLP_UP) {
 
-        // Either rowType or sign computed above can be used
-        if (rowType == GLP_UP) {
-          problem.h[inequalityRow] = glp_get_row_ub(_problem, i);
-        } else if (rowType == GLP_LO) {
-          problem.h[inequalityRow] = -glp_get_row_lb(_problem, i);
+        if (_convertICToEC) {
+          A.append(equalityRow, index[j] - 1, values[j]);
+        } else {
+          G.append(inequalityRow, index[j] - 1, values[j]);
+        }
+
+      } else if (rowType == GLP_LO) {
+
+        if (_convertICToEC) {
+          A.append(equalityRow, index[j] - 1, values[j]);
+        } else {
+          G.append(inequalityRow, index[j] - 1, -values[j]);
         }
       }
     }
 
-    if (rowType == GLP_FX) {
+    // Additional column should be added in same row before we finalize, i.e.
+    // slack column
+    // Before incrementing row index add RHS
+    if (rowType == GLP_LO) {
+
+      if (_convertICToEC) {
+        // At last row pointer indicated by nnzRow, add slack -1 for lower bound
+        // (negative)
+        A.append(equalityRow, slackColumnIndex, -1);
+        problem.b[equalityRow] = glp_get_row_lb(_problem, i);
+        A.finalize(equalityRow++);
+
+        // Implicit positive orthant constraint
+        G.append(inequalityRow, slackColumnIndex++, -1);
+        problem.h[inequalityRow] = 0;
+        G.finalize(inequalityRow++);
+      } else {
+        problem.h[inequalityRow] = -glp_get_row_lb(_problem, i);
+        G.finalize(inequalityRow++);
+      }
+    } else if (rowType == GLP_UP) {
+
+      if (_convertICToEC) {
+        // At last row pointer indicated by nnzRow, add slack 1 for lower bound
+        // (positive)
+        A.append(equalityRow, slackColumnIndex, 1);
+        problem.b[equalityRow] = glp_get_row_ub(_problem, i);
+        A.finalize(equalityRow++);
+
+        // Implicit positive orthant constraint
+        G.append(inequalityRow, slackColumnIndex++, -1);
+        problem.h[inequalityRow] = 0;
+        G.finalize(inequalityRow++);
+      } else {
+        problem.h[inequalityRow] = glp_get_row_ub(_problem, i);
+        G.finalize(inequalityRow++);
+      }
+
+    } else if (rowType == GLP_FX) {
+      problem.b[equalityRow] = glp_get_row_ub(_problem, i);
       A.finalize(equalityRow++);
-    } else if (rowType == GLP_UP || rowType == GLP_LO) {
-      G.finalize(inequalityRow++);
     }
   }
 
@@ -184,11 +241,12 @@ Problem Parser::createProblem(Parser::Dimensions finalRowsAndColumns,
     problem.c[columnIndex - 1] = glp_get_obj_coef(_problem, columnIndex);
   }
 
-  // FIXME _logger Not wokring why?
-  //    _logger->info("Equality rows: {}", A);
-  //    _logger->info("Ineqaulity rows: {}", G);
+  // Initialize slack columns in objective
+  for(int columnIndex = definedColumns; columnIndex < slackColumnIndex; ++columnIndex) {
+    problem.c[columnIndex] = 0;
+  }
 
-  //    _logger->info("Inequality rows: ") << G;
+  // FIXME _logger Not wokrking for blaze matrices why?
 
   problem.A = A;
   problem.G = G;
@@ -206,7 +264,6 @@ inline void Parser::createInequalityRowWithValueOne(
     h[row] = glp_get_col_ub(_problem, columnIndex + 1);
   }
 
-  G.reserve(row, 1);
   G.append(row, columnIndex, value);
   G.finalize(row++);
 }
@@ -236,11 +293,11 @@ ClassicalProblem Parser::getClassicalProblem() const {
 
   // RHS Equality
   for (size_t k = 0; k < problem.b.size(); ++k) {
-    cProblem.bValue[k] = problem.b[k];
+    cProblem.b[k] = problem.b[k];
   }
   // RHS Inequality
   for (size_t k = 0; k < problem.h.size(); ++k) {
-    cProblem.hValue[k] = problem.h[k];
+    cProblem.h[k] = problem.h[k];
   }
 
   // G

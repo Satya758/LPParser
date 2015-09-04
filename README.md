@@ -6,7 +6,7 @@
     s.t. A*x = b
          G*x <=_K h
     ```
-- 
+ 
 # Dependencies
  - [Blaze](https://bitbucket.org/blaze-lib/blaze)
  - [GLPK](https://www.gnu.org/software/glpk/)
@@ -15,7 +15,7 @@
  - [Boost](boost.org), boost system and boost thread (blaze dependencies)
  - gcc 4.9.2
  
- # Install
+# Install
  - Generate make files passing 
    * -DGLPK_INC="" 
    * -DGLPK_LIB="" 
@@ -24,6 +24,7 @@
    * -DBOOST_LIB=""
    * -DCMAKE_INSTALL_PREFIX=""
  - make install  
+ 
 # Usage
  - Include header Parser.hpp and Problem.hpp
  - Link with parser static lib
@@ -35,10 +36,12 @@
  - Constructor of parser, first argument accepts lp format file and second argument if true converts all inequality constraints to equality constraints. (except implicit constraint x >= 0 and bounds).
  - If convertInequalityToEquality is true, number of rows in A will and increase in number of columns due to additional slack variables, but G matrix will be sparse (Only one column active for each row).
  - If convertInequalityToEquality is false, size of matrices are same as input as currently (Free and Fixed variables are not supported).
+   
    ```
    Parser(const std::string filePath, const bool convertInequalityToEquality)
    ```
  - If you need to parse MPS files, adapt Parser.cpp constructor to read MPS files.   
+  
 # Limitations / TODO
  - Free and Fixed variables are not supported yet.
  - Cannot convert solution to original problem.
@@ -48,7 +51,6 @@
 # Why / Motivation
  - There is no parser available to run new open source solvers like [ECOS](https://github.com/embotech/ecos), [SCS](https://github.com/cvxgrp/scs), [cvxopt](cvxopt.org) e.t.c.
  - Test your own implementation.
- - GLPK provides parser for many formats but not the C structures.
 
 # Faq
-- Its not a presolver.
+ - Its not a presolver.

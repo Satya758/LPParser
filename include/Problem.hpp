@@ -95,20 +95,22 @@ template <class T> using Array = std::unique_ptr<T[]>;
  * Plain pointers instead of blaze objects.
  *
  * not first class citizen, created from blaze.
+ *
+ * Compressed Column Storage
  */
-class ClassicalProblem {
+class CCSProblem {
 public:
-  ClassicalProblem(const size_t equalityRows, const size_t inequalityRows,
+  CCSProblem(const size_t equalityRows, const size_t inequalityRows,
                    const size_t columns, const size_t Gnnz, const size_t Annz)
       : equalityRows(equalityRows),
         inequalityRows(inequalityRows),
         columns(columns),
         c(std::make_unique<double[]>(columns)),
         GColumnptr(std::make_unique<size_t[]>(columns + 1)),
-        GRowPtr(std::make_unique<size_t[]>(Gnnz)),
+        GRowInd(std::make_unique<size_t[]>(Gnnz)),
         GValue(std::make_unique<double[]>(Gnnz)),
         AColumnptr(std::make_unique<size_t[]>(columns + 1)),
-        ARowPtr(std::make_unique<size_t[]>(Annz)),
+        ARowInd(std::make_unique<size_t[]>(Annz)),
         AValue(std::make_unique<double[]>(Annz)),
         h(std::make_unique<double[]>(inequalityRows)),
         b(std::make_unique<double[]>(equalityRows)) {}
@@ -120,18 +122,18 @@ public:
   Array<double> c;
 
   Array<size_t> GColumnptr;
-  Array<size_t> GRowPtr;
+  Array<size_t> GRowInd;
   Array<double> GValue;
 
   Array<size_t> AColumnptr;
-  Array<size_t> ARowPtr;
+  Array<size_t> ARowInd;
   Array<double> AValue;
 
   Array<double> h;
   Array<double> b;
 
   friend std::ostream& operator<<(std::ostream& os,
-                                  const ClassicalProblem& problem);
+                                  const CCSProblem& problem);
 };
 
 template <typename T>
@@ -145,14 +147,14 @@ void printArray(const std::string& context, size_t size,
 }
 
 inline std::ostream& operator<<(std::ostream& os,
-                                const ClassicalProblem& problem) {
+                                const CCSProblem& problem) {
   printArray("Objective matrix", problem.columns, problem.c);
 
   printArray("Inequality matrix Column ptr", problem.columns + 1,
              problem.GColumnptr);
   // Get nnz from column ptr
   printArray("Inequality matrix Row ptr", problem.GColumnptr[problem.columns],
-             problem.GRowPtr);
+             problem.GRowInd);
   printArray("Inequality matrix values", problem.GColumnptr[problem.columns],
              problem.GValue);
 
@@ -160,7 +162,7 @@ inline std::ostream& operator<<(std::ostream& os,
              problem.AColumnptr);
   // Get nnz from column ptr
   printArray("Equality matrix Row ptr", problem.AColumnptr[problem.columns],
-             problem.ARowPtr);
+             problem.ARowInd);
   printArray("Equality matrix values", problem.AColumnptr[problem.columns],
              problem.AValue);
 

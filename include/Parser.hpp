@@ -73,12 +73,12 @@ public:
   /**
    *
    */
-  Problem getProblem() const;
+  Problem getBlazeProblem() const;
 
   /**
-   *
+   * get Column compressed storage
    */
-  ClassicalProblem getClassicalProblem() const;
+  CCSProblem getCCSProblem() const;
 };
 
 } // lp

@@ -268,7 +268,7 @@ inline void Parser::createInequalityRowWithValueOne(
   G.finalize(row++);
 }
 
-Problem Parser::getProblem() const {
+Problem Parser::getBlazeProblem() const {
   int definedRows = glp_get_num_rows(_problem);
   int definedColumns = glp_get_num_cols(_problem);
 
@@ -278,12 +278,12 @@ Problem Parser::getProblem() const {
   return createProblem(finalRowsAndColumns, definedRows, definedColumns);
 }
 
-ClassicalProblem Parser::getClassicalProblem() const {
+CCSProblem Parser::getCCSProblem() const {
   _logger->info("Creation of Blaze objects started");
-  const Problem problem = getProblem();
+  const Problem problem = getBlazeProblem();
   _logger->info("Creation of Blaze objects Ended");
 
-  ClassicalProblem cProblem(problem.equalityRows, problem.inequalityRows,
+  CCSProblem cProblem(problem.equalityRows, problem.inequalityRows,
                             problem.columns, problem.G.nonZeros(),
                             problem.A.nonZeros());
   // Objective
@@ -301,10 +301,10 @@ ClassicalProblem Parser::getClassicalProblem() const {
   }
 
   // G
-  createSparseMatrix(cProblem.GColumnptr, cProblem.GRowPtr, cProblem.GValue,
+  createSparseMatrix(cProblem.GColumnptr, cProblem.GRowInd, cProblem.GValue,
                      problem.G);
   // A
-  createSparseMatrix(cProblem.AColumnptr, cProblem.ARowPtr, cProblem.AValue,
+  createSparseMatrix(cProblem.AColumnptr, cProblem.ARowInd, cProblem.AValue,
                      problem.A);
 
   return cProblem;

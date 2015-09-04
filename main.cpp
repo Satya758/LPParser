@@ -17,9 +17,10 @@ int main() {
   // TODO Free and Fixed variables are not handled yet
   //  lp::Parser parser("/home/satya/LPProblems/test/test.lp", false);
 
+
   lp::Parser parser("/home/satya/LPProblems/test/blend.lp", true);
 
-  lp::Problem problem = parser.getProblem();
+  lp::Problem problem = parser.getBlazeProblem();
   //
   cout << problem << endl;
 

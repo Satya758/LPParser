@@ -29,6 +29,7 @@
  - Include header Parser.hpp and Problem.hpp
  - Link with parser static lib
  - Parser header has two methods which return problem data.
+ 
    ```
     getBlazeProblem()
     getCCSProblem()

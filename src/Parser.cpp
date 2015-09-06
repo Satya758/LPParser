@@ -3,7 +3,7 @@
 
 #include "Parser.hpp"
 
-namespace lp {
+namespace lpp {
 
 const std::shared_ptr<spdlog::logger> Parser::_logger =
     spdlog::stdout_logger_mt("console");

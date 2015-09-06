@@ -13,7 +13,7 @@
 
 #include "spdlog/spdlog.h"
 
-namespace lp {
+namespace lpp {
 
 /**
  * Converts GLPK structures to Blaze matrices

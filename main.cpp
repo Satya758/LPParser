@@ -18,9 +18,9 @@ int main() {
   //  lp::Parser parser("/home/satya/LPProblems/test/test.lp", false);
 
 
-  lp::Parser parser("/home/satya/LPProblems/test/blend.lp", true);
+  lpp::Parser parser("/home/satya/LPProblems/test/blend.lp", true);
 
-  lp::Problem problem = parser.getBlazeProblem();
+  lpp::Problem problem = parser.getBlazeProblem();
   //
   cout << problem << endl;
 

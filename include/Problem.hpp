@@ -1,5 +1,5 @@
-#ifndef PROBLEM_HPP
-#define PROBLEM_HPP
+#ifndef LPPARSER_PROBLEM_HPP
+#define LPPARSER_PROBLEM_HPP
 
 /**
  * Subset of file copied from LinearProgramming repository Problem definiton
@@ -10,7 +10,7 @@
 #include <blaze/Blaze.h>
 
 // TODO namespace lp is used as working name until I find name I like :-)
-namespace lp {
+namespace lpp {
 
 // If double is not good enough for all platforms take it as template parameter
 using SparseMatrix = blaze::CompressedMatrix<double, blaze::columnMajor>;

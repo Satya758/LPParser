@@ -39,4 +39,4 @@ target_link_libraries(${PROJECT_NAME}
         pthread)
 
 install(TARGETS parser DESTINATION lib)
-install(FILES include/Parser.hpp include/Problem.hpp DESTINATION include)
+install(FILES include/Parser.hpp include/Problem.hpp DESTINATION include/parser)
